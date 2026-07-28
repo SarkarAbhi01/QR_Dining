@@ -1,0 +1,251 @@
+// ==========================================================
+// QR-Based Contactless Dining System — Prisma Schema
+// Multi-tenant SaaS model (PostgreSQL)
+// ==========================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------
+// ENUMS
+// ----------------------------------------------------------
+
+enum PlatformRole {
+  SUPER_ADMIN
+  RESTAURANT_ADMIN
+  MANAGER
+  CHEF
+  WAITER
+}
+
+enum SubscriptionPlan {
+  TRIAL
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  CANCELLED
+}
+
+enum TableStatus {
+  VACANT
+  OCCUPIED
+  RESERVED
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  COOKING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+enum PaymentMode {
+  ONLINE
+  CASH
+  CARD
+  UPI
+}
+
+// ----------------------------------------------------------
+// PLATFORM LEVEL (Super Admin)
+// ----------------------------------------------------------
+
+model Restaurant {
+  id                 String             @id @default(uuid())
+  name               String
+  slug               String             @unique
+  address             String?
+  phone              String?
+  logoUrl            String?
+  gstNumber          String?
+  gstPercent         Decimal            @default(5.0) @db.Decimal(5, 2)
+  subscriptionPlan   SubscriptionPlan   @default(TRIAL)
+  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  subscriptionEndsAt DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  users      User[]
+  tables     RestaurantTable[]
+  categories Category[]
+  menuItems  MenuItem[]
+  orders     Order[]
+  payments   Payment[]
+
+  @@map("restaurants")
+}
+
+model Subscription {
+  id           String             @id @default(uuid())
+  restaurantId String
+  plan         SubscriptionPlan
+  amount       Decimal            @db.Decimal(10, 2)
+  status       SubscriptionStatus
+  startedAt    DateTime           @default(now())
+  expiresAt    DateTime
+
+  @@map("subscriptions")
+}
+
+// ----------------------------------------------------------
+// USERS (Super Admin / Restaurant Admin / Manager / Chef / Waiter)
+// ----------------------------------------------------------
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  password     String
+  phone        String?
+  role         PlatformRole
+  isActive     Boolean      @default(true)
+  restaurantId String?
+  restaurant   Restaurant?  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+
+  acceptedOrders Order[] @relation("AcceptedBy")
+  servedOrders   Order[] @relation("ServedBy")
+
+  @@index([restaurantId])
+  @@map("users")
+}
+
+// ----------------------------------------------------------
+// TABLES + QR CODES
+// ----------------------------------------------------------
+
+model RestaurantTable {
+  id           String      @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  tableNumber  String
+  capacity     Int         @default(4)
+  qrCodeUrl    String?
+  qrToken      String      @unique @default(uuid())
+  status       TableStatus @default(VACANT)
+  createdAt    DateTime    @default(now())
+
+  orders Order[]
+
+  @@unique([restaurantId, tableNumber])
+  @@map("tables")
+}
+
+// ----------------------------------------------------------
+// MENU
+// ----------------------------------------------------------
+
+model Category {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int        @default(0)
+
+  menuItems MenuItem[]
+
+  @@map("categories")
+}
+
+model MenuItem {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  imageUrl     String?
+  price        Decimal    @db.Decimal(10, 2)
+  isVeg        Boolean    @default(true)
+  isAvailable  Boolean    @default(true)
+  variants     Json?      // e.g. [{ "label": "Half", "price": 120 }, { "label": "Full", "price": 220 }]
+  createdAt    DateTime   @default(now())
+
+  orderItems OrderItem[]
+
+  @@map("menu_items")
+}
+
+// ----------------------------------------------------------
+// ORDERS
+// ----------------------------------------------------------
+
+model Order {
+  id            String        @id @default(uuid())
+  restaurantId  String
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  tableId       String
+  table         RestaurantTable @relation(fields: [tableId], references: [id])
+  customerName  String
+  customerPhone String
+  status        OrderStatus   @default(PENDING)
+  subtotal      Decimal       @db.Decimal(10, 2)
+  gstAmount     Decimal       @db.Decimal(10, 2) @default(0)
+  discount      Decimal       @db.Decimal(10, 2) @default(0)
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+  paymentMode   PaymentMode?
+  waiterCallRequested Boolean @default(false)
+  acceptedById  String?
+  acceptedBy    User?         @relation("AcceptedBy", fields: [acceptedById], references: [id])
+  servedById    String?
+  servedBy      User?         @relation("ServedBy", fields: [servedById], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([restaurantId, status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  variantLabel String?
+  quantity   Int      @default(1)
+  price      Decimal  @db.Decimal(10, 2)
+  notes      String?
+
+  @@map("order_items")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  restaurantId  String
+  restaurant    Restaurant    @relation(fields: [restaurantId], references: [id])
+  amount        Decimal       @db.Decimal(10, 2)
+  mode          PaymentMode
+  status        PaymentStatus @default(UNPAID)
+  gatewayRef    String?
+  createdAt     DateTime      @default(now())
+
+  @@map("payments")
+}
