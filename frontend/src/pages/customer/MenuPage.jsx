@@ -22,7 +22,19 @@ export default function MenuPage() {
         setTable(res.data);
         setActiveCategory(res.data.restaurant.categories[0]?.id);
       })
-      .catch((err) => setError(err.response?.data?.message || "Unable to load menu"));
+      .catch((err) => {
+        if (err.response) {
+          // Server responded, e.g. 404 "Invalid or expired QR code"
+          setError(err.response.data?.message || "Unable to load menu");
+        } else {
+          // No response at all = the API server couldn't be reached from
+          // this device — almost always VITE_API_URL pointing at the wrong
+          // (e.g. localhost) address for a production build.
+          setError(
+            "Could not connect to the restaurant's server. If you are the restaurant owner, check that VITE_API_URL in the frontend's production build points to your live backend URL, not localhost."
+          );
+        }
+      });
   }, [qrToken]);
 
   const itemsByCategory = useMemo(() => {
