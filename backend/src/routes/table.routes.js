@@ -3,7 +3,7 @@ const ctrl = require("../controllers/table.controller");
 const { requireAuth, requireRole, enforceTenant } = require("../middleware/auth");
 
 // Public — customer scans QR, no login
-router.get("/resolve/:qrToken", ctrl.resolveQrToken);
+router.get("/tables/resolve/:qrToken", ctrl.resolveQrToken);
 
 // Restaurant Admin / Manager — table + QR management
 router.post(
