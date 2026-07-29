@@ -8,6 +8,7 @@ export default function MenuPage() {
 
   const [table, setTable] = useState(null);
   const [error, setError] = useState("");
+  const [debugInfo, setDebugInfo] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
   const [cart, setCart] = useState({}); // { menuItemId: { item, qty, variant } }
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -23,13 +24,17 @@ export default function MenuPage() {
         setActiveCategory(res.data.restaurant.categories[0]?.id);
       })
       .catch((err) => {
-        const attemptedUrl = `${err.config?.baseURL || "(no baseURL set)"}${err.config?.url || ""}`
+        // Reconstruct exactly what URL was actually called and what came
+        // back, so the failure point is visible on-screen — no DevTools
+        // needed to diagnose a wrong domain / missing "/api" / stale build.
+        const attemptedUrl = `${err.config?.baseURL || "(no baseURL set)"}${err.config?.url || ""}`;
         setDebugInfo({
           attemptedUrl,
-          status:err.response?.status ?? "no response (network/CORS failure)",
+          status: err.response?.status ?? "no response (network/CORS failure)",
           body: err.response?.data ? JSON.stringify(err.response.data) : "(none)",
         });
-        if (err.response) {          
+
+        if (err.response) {
           // Server responded, e.g. 404 "Invalid or expired QR code"
           setError(err.response.data?.message || "Unable to load menu");
         } else {
@@ -108,9 +113,17 @@ export default function MenuPage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream text-ink px-6">
-        <div className="text-center">
+        <div className="text-center max-w-lg">
           <p className="font-display text-2xl mb-2">Menu unavailable</p>
-          <p className="text-ink/60">{error}</p>
+          <p className="text-ink/60 mb-4">{error}</p>
+          {debugInfo && (
+            <div className="text-left bg-ink text-cream text-xs rounded-xl p-4 font-mono space-y-1 overflow-x-auto">
+              <p className="text-marigold font-semibold mb-1">Debug info (share this with support):</p>
+              <p><span className="text-ash">Called URL:</span> {debugInfo.attemptedUrl}</p>
+              <p><span className="text-ash">Status:</span> {debugInfo.status}</p>
+              <p><span className="text-ash">Response:</span> {debugInfo.body}</p>
+            </div>
+          )}
         </div>
       </div>
     );
