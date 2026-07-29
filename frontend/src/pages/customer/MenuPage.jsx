@@ -23,7 +23,13 @@ export default function MenuPage() {
         setActiveCategory(res.data.restaurant.categories[0]?.id);
       })
       .catch((err) => {
-        if (err.response) {
+        const attemptedUrl = `${err.config?.baseURL || "(no baseURL set)"}${err.config?.url || ""}`
+        setDebugInfo({
+          attemptedUrl,
+          status:err.response?.status ?? "no response (network/CORS failure)",
+          body: err.response?.data ? JSON.stringify(err.response.data) : "(none)",
+        });
+        if (err.response) {          
           // Server responded, e.g. 404 "Invalid or expired QR code"
           setError(err.response.data?.message || "Unable to load menu");
         } else {
