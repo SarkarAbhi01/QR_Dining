@@ -32,6 +32,13 @@ export default function SuperAdminDashboard() {
     load();
   }
 
+  async function toggleReportPermission(restaurant) {
+    await api.patch(`/restaurants/${restaurant.id}/report-permission`, {
+      canDownloadReports: !restaurant.canDownloadReports,
+    });
+    load();
+  }
+
   return (
     <StaffLayout>
       <h1 className="font-display text-2xl mb-6">Platform Overview</h1>
@@ -63,7 +70,7 @@ export default function SuperAdminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-ash text-left border-b border-white/10">
-                <th className="py-2">Name</th><th>Plan</th><th>Status</th><th>Orders</th><th></th>
+                <th className="py-2">Name</th><th>Plan</th><th>Status</th><th>Orders</th><th>Reports</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -77,6 +84,15 @@ export default function SuperAdminDashboard() {
                     </span>
                   </td>
                   <td>{r._count?.orders ?? 0}</td>
+                  <td>
+                    <button
+                      onClick={() => toggleReportPermission(r)}
+                      className={`badge ${r.canDownloadReports ? "bg-sage/20 text-sage" : "bg-ash/20 text-ash"}`}
+                      title="Click to toggle CSV report download access"
+                    >
+                      {r.canDownloadReports ? "Download: ON" : "Download: OFF"}
+                    </button>
+                  </td>
                   <td>
                     {r.subscriptionStatus === "ACTIVE" ? (
                       <button onClick={() => updateStatus(r.id, "SUSPENDED")} className="text-chili text-xs">Suspend</button>

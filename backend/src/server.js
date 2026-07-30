@@ -15,6 +15,7 @@ const restaurantRoutes = require("./routes/restaurant.routes");
 const tableRoutes = require("./routes/table.routes");
 const menuRoutes = require("./routes/menu.routes");
 const orderRoutes = require("./routes/order.routes");
+const reportsRoutes = require("./routes/reports.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -39,6 +40,7 @@ app.use("/api/restaurants", restaurantRoutes);
 app.use("/api", tableRoutes); // /api/tables/... and /api/restaurants/:id/tables
 app.use("/api", menuRoutes); // /api/restaurants/:id/categories, /menu-items
 app.use("/api", orderRoutes); // /api/public/orders, /api/orders/:id/...
+app.use("/api", reportsRoutes); // /api/restaurants/:id/reports/...
 
 // ------------------ 404 handler ------------------
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));

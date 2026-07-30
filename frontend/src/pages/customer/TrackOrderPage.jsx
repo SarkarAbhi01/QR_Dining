@@ -17,6 +17,8 @@ export default function TrackOrderPage() {
   const [callSent, setCallSent] = useState(false);
   const [splitCount, setSplitCount] = useState(1);
   const [showSplit, setShowSplit] = useState(false);
+  const [payingMode, setPayingMode] = useState(null); // "CASH" | "ONLINE" while in progress
+  const [payMessage, setPayMessage] = useState("");
 
   useEffect(() => {
     api.get(`/public/orders/${orderId}`).then((res) => setOrder(res.data));
@@ -36,6 +38,34 @@ export default function TrackOrderPage() {
     await api.post(`/public/orders/${orderId}/call-waiter`, { reason: "Needs assistance" });
     setCallSent(true);
     setTimeout(() => setCallSent(false), 4000);
+  }
+
+  async function payByCash() {
+    setPayingMode("CASH");
+    try {
+      const res = await api.post(`/public/orders/${orderId}/payment-intent`, { mode: "CASH" });
+      setOrder(res.data);
+      setPayMessage("Please pay at the counter — our staff has been notified you're ready to pay.");
+    } finally {
+      setPayingMode(null);
+    }
+  }
+
+  async function payOnline() {
+    setPayingMode("ONLINE");
+    setPayMessage("Processing payment…");
+    try {
+      // Simulates a payment gateway round-trip. Swap this for a real
+      // Razorpay/PhonePe checkout call when you wire up a live gateway.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const res = await api.post(`/public/orders/${orderId}/payment-intent`, { mode: "ONLINE" });
+      setOrder(res.data);
+      setPayMessage("Payment successful ✅");
+    } catch (err) {
+      setPayMessage(err.response?.data?.message || "Payment failed, please try again.");
+    } finally {
+      setPayingMode(null);
+    }
   }
 
   if (!order) {
@@ -117,6 +147,39 @@ export default function TrackOrderPage() {
           </div>
         )}
       </div>
+
+      {/* Payment */}
+      {order.paymentStatus === "PAID" ? (
+        <div className="card !bg-sage/10 border border-sage/30 p-5 mb-5 text-center">
+          <p className="text-sage font-semibold">✅ Payment received — thank you!</p>
+        </div>
+      ) : (
+        <div className="card !bg-white p-5 mb-5">
+          <h2 className="font-display text-lg mb-3">Pay for your order</h2>
+          {payMessage && <p className="text-sm text-clay mb-3">{payMessage}</p>}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={payByCash}
+              disabled={payingMode !== null}
+              className="border-2 border-clay text-clay rounded-xl py-3 font-semibold disabled:opacity-40"
+            >
+              💵 Pay Cash{"\n"}<span className="block text-xs font-normal">at the counter</span>
+            </button>
+            <button
+              onClick={payOnline}
+              disabled={payingMode !== null}
+              className="bg-clay text-cream rounded-xl py-3 font-semibold disabled:opacity-60"
+            >
+              {payingMode === "ONLINE" ? "Processing…" : "💳 Pay Online"}
+            </button>
+          </div>
+          {order.paymentMode === "CASH" && order.paymentStatus !== "PAID" && (
+            <p className="text-xs text-ink/50 mt-3">
+              Waiting for a staff member to confirm your cash payment at the counter.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Call waiter */}
       <button

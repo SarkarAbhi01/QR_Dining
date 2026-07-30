@@ -209,6 +209,63 @@ async function splitBill(req, res) {
   res.json({ totalAmount: order.totalAmount, numberOfPeople, perPerson });
 }
 
+/**
+ * POST /api/public/orders/:id/payment-intent — customer picks how they'll pay.
+ *  - CASH: doesn't mark the order paid (a staff member must confirm cash was
+ *    actually received at the counter) — it just flags intent and pings the
+ *    floor staff so someone comes to collect payment.
+ *  - ONLINE: simulates a successful gateway payment and marks the order paid
+ *    immediately. Swap the inner logic for a real Razorpay/PhonePe order +
+ *    webhook confirmation when you wire up a live gateway.
+ */
+async function customerPaymentIntent(req, res) {
+  const { mode } = req.body; // "CASH" | "ONLINE"
+  if (!["CASH", "ONLINE"].includes(mode)) {
+    return res.status(400).json({ message: "mode must be CASH or ONLINE" });
+  }
+
+  const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { table: true } });
+  if (!order) return res.status(404).json({ message: "Order not found" });
+  if (order.paymentStatus === "PAID") {
+    return res.status(400).json({ message: "This order is already paid" });
+  }
+
+  if (mode === "CASH") {
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { paymentMode: "CASH" },
+      include: { items: { include: { menuItem: true } }, table: true },
+    });
+    // Let the floor staff know a customer is ready to pay at the counter
+    emitWaiterCall(order.restaurantId, {
+      orderId: order.id,
+      tableNumber: order.table.tableNumber,
+      reason: `Ready to pay ₹${order.totalAmount} in cash`,
+      at: new Date(),
+    });
+    return res.json(updated);
+  }
+
+  // mode === "ONLINE" — simulated gateway success
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: { paymentStatus: "PAID", paymentMode: "ONLINE" },
+    include: { items: { include: { menuItem: true } }, table: true },
+  });
+  await prisma.payment.create({
+    data: {
+      orderId: order.id,
+      restaurantId: order.restaurantId,
+      amount: order.totalAmount,
+      mode: "ONLINE",
+      status: "PAID",
+      gatewayRef: `SIMULATED-${Date.now()}`,
+    },
+  });
+  emitPaymentUpdate(order.restaurantId, updated);
+  res.json(updated);
+}
+
 module.exports = {
   placeOrder,
   getOrderPublic,
@@ -218,4 +275,5 @@ module.exports = {
   generateBill,
   markPaid,
   splitBill,
+  customerPaymentIntent,
 };

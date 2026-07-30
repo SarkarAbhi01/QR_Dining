@@ -11,6 +11,7 @@ import MenuManagement from "./pages/admin/MenuManagement";
 import TableManagement from "./pages/admin/TableManagement";
 import StaffManagement from "./pages/admin/StaffManagement";
 import POSBilling from "./pages/admin/POSBilling";
+import Reports from "./pages/admin/Reports";
 
 import KitchenDisplay from "./pages/kitchen/KitchenDisplay";
 import WaiterDashboard from "./pages/waiter/WaiterDashboard";
@@ -83,6 +84,14 @@ export default function App() {
         element={
           <ProtectedRoute roles={["RESTAURANT_ADMIN", "MANAGER", "SUPER_ADMIN"]}>
             <POSBilling />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute roles={["RESTAURANT_ADMIN", "MANAGER", "SUPER_ADMIN"]}>
+            <Reports />
           </ProtectedRoute>
         }
       />

@@ -6,6 +6,7 @@ const { requireAuth, requireRole } = require("../middleware/auth");
 router.post("/public/orders", ctrl.placeOrder);
 router.get("/public/orders/:id", ctrl.getOrderPublic);
 router.post("/public/orders/:id/call-waiter", ctrl.callWaiter);
+router.post("/public/orders/:id/payment-intent", ctrl.customerPaymentIntent);
 
 // ----- Staff (Admin / Manager / Chef / Waiter) -----
 router.get("/restaurants/:restaurantId/orders", requireAuth, ctrl.listOrders);

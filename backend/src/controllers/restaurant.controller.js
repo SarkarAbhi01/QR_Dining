@@ -59,6 +59,19 @@ async function updateSubscription(req, res) {
   res.json(restaurant);
 }
 
+/**
+ * PATCH /api/restaurants/:id/report-permission — Super Admin only. Flips
+ * whether this restaurant is allowed to download its CSV order reports.
+ */
+async function toggleReportPermission(req, res) {
+  const { canDownloadReports } = req.body;
+  const restaurant = await prisma.restaurant.update({
+    where: { id: req.params.id },
+    data: { canDownloadReports: !!canDownloadReports },
+  });
+  res.json(restaurant);
+}
+
 /** GET /api/restaurants/:id/analytics — platform-wide revenue view for Super Admin */
 async function platformAnalytics(req, res) {
   const [totalRestaurants, activeSubs, totalOrders, revenueAgg] = await Promise.all([
@@ -117,6 +130,7 @@ module.exports = {
   listRestaurants,
   getRestaurant,
   updateSubscription,
+  toggleReportPermission,
   platformAnalytics,
   restaurantDashboard,
 };

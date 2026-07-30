@@ -94,4 +94,42 @@ async function changePassword(req, res) {
   res.json({ message: "Password updated successfully" });
 }
 
-module.exports = { login, createStaff, me, changePassword };
+/**
+ * GET /api/auth/staff — Restaurant Admin/Manager sees their own team;
+ * Super Admin can pass ?restaurantId= to inspect any restaurant's staff.
+ */
+async function listStaff(req, res) {
+  const restaurantId = req.user.role === "SUPER_ADMIN" ? req.query.restaurantId : req.user.restaurantId;
+  if (!restaurantId) {
+    return res.status(400).json({ message: "restaurantId is required" });
+  }
+
+  const staff = await prisma.user.findMany({
+    where: { restaurantId, role: { in: ["RESTAURANT_ADMIN", "MANAGER", "CHEF", "WAITER"] } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(staff.map(sanitize));
+}
+
+/** PATCH /api/auth/staff/:id/toggle — activate/deactivate a staff account */
+async function toggleStaffActive(req, res) {
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) return res.status(404).json({ message: "Staff member not found" });
+
+  // Tenant isolation: only that restaurant's own admin (or Super Admin) can toggle
+  if (req.user.role !== "SUPER_ADMIN" && target.restaurantId !== req.user.restaurantId) {
+    return res.status(403).json({ message: "Cross-restaurant access denied" });
+  }
+  if (target.role === "RESTAURANT_ADMIN" && req.user.role !== "SUPER_ADMIN") {
+    return res.status(403).json({ message: "Only the platform can deactivate a Restaurant Admin" });
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: target.id },
+    data: { isActive: !target.isActive },
+  });
+  res.json(sanitize(updated));
+}
+
+module.exports = { login, createStaff, me, changePassword, listStaff, toggleStaffActive };

@@ -7,6 +7,7 @@ router.post("/", requireAuth, requireRole("SUPER_ADMIN"), ctrl.createRestaurant)
 router.get("/", requireAuth, requireRole("SUPER_ADMIN"), ctrl.listRestaurants);
 router.get("/platform/analytics", requireAuth, requireRole("SUPER_ADMIN"), ctrl.platformAnalytics);
 router.patch("/:id/subscription", requireAuth, requireRole("SUPER_ADMIN"), ctrl.updateSubscription);
+router.patch("/:id/report-permission", requireAuth, requireRole("SUPER_ADMIN"), ctrl.toggleReportPermission);
 
 // Restaurant Admin (own tenant) or Super Admin
 router.get("/:id", requireAuth, ctrl.getRestaurant);
