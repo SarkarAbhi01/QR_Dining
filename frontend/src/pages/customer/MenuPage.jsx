@@ -16,6 +16,8 @@ export default function MenuPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [placing, setPlacing] = useState(false);
 
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
     api
       .get(`/tables/resolve/${qrToken}`)
@@ -138,39 +140,103 @@ export default function MenuPage() {
     );
   }
 
-  const activeItems = itemsByCategory[activeCategory] || [];
+  const activeItems = (itemsByCategory[activeCategory] || []).filter((item) =>
+    item.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-menuBg text-menuInk">
       <div className="mx-auto w-full max-w-xl">
         {/* Header */}
-        <header className="safe-top px-5 pt-6 pb-6 bg-menuInk text-menuBg rounded-b-[2rem]">
-          <p className="text-menuGold text-[11px] font-semibold tracking-[0.2em] uppercase">
-            Table {table.tableNumber}
-          </p>
-          <h1 className="font-display text-[28px] leading-tight mt-1.5 break-words">
-            {table.restaurant.name}
-          </h1>
-          {table.restaurant.address && (
-            <p className="text-menuBg/60 text-sm mt-1.5">{table.restaurant.address}</p>
-          )}
-        </header>
+        <header className="relative overflow-hidden rounded-b-[32px] bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 text-white shadow-xl">
 
-        {/* Category tabs */}
-        <div className="sticky top-0 z-20 bg-menuBg/95 backdrop-blur-sm px-5 py-3 flex gap-2 overflow-x-auto border-b border-menuBorder [-webkit-overflow-scrolling:touch] [scrollbar-width:none]">
-          {table.restaurant.categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                activeCategory === cat.id
-                  ? "bg-menuAccent text-white"
-                  : "bg-menuInk/5 text-menuInk/70"
-              }`}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white"></div>
+            <div className="absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-white"></div>
+          </div>
+
+          <div className="relative px-6 pt-8 pb-8">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold tracking-widest uppercase">
+                  Table {table.tableNumber}
+                </span>
+
+                <h1 className="mt-4 text-3xl font-bold leading-tight">
+                  {table.restaurant.name}
+                </h1>
+
+                <p className="mt-2 text-sm text-orange-100">
+                  {table.restaurant.address}
+                </p>
+
+              </div>
+
+              <div className="rounded-2xl bg-white/20 px-4 py-3 backdrop-blur">
+
+                <p className="text-xs">⭐ Rating</p>
+
+                <h3 className="text-lg font-bold">
+                  4.7
+                </h3>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </header>
+        <div className="sticky top-0 z-30 bg-menuBg px-5 pt-4">
+
+          <div className="relative">
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search delicious food..."
+              className="w-full rounded-2xl border border-gray-200 bg-white px-5 py-3 pl-12 shadow-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+            />
+
+            <svg
+              className="absolute left-4 top-3.5 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
             >
-              {cat.name}
-            </button>
-          ))}
+              <path d="M21 21l-4.3-4.3"></path>
+              <circle cx="11" cy="11" r="6"></circle>
+            </svg>
+
+          </div>
+
+        </div>
+        {/* Category tabs */}
+        <div className="sticky top-[72px] z-20 bg-menuBg px-5 py-4 overflow-x-auto">
+
+          <div className="flex gap-3 w-max">
+
+            {table.restaurant.categories.map((cat) => (
+
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${activeCategory === cat.id
+                  ? "bg-orange-600 text-white shadow-lg scale-105"
+                  : "bg-white border border-gray-200 text-gray-700 hover:border-orange-400"
+                  }`}
+              >
+                {cat.name}
+              </button>
+
+            ))}
+
+          </div>
+
         </div>
 
         {/* Menu items */}
@@ -179,94 +245,149 @@ export default function MenuPage() {
             const simpleKey = keyFor(item.id, null);
             const simpleQty = cart[simpleKey]?.qty || 0;
             return (
-              <div key={item.id} className="menu-card p-4 flex gap-4">
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-20 h-20 shrink-0 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="w-20 h-20 shrink-0 rounded-xl bg-menuBg flex items-center justify-center text-menuGold/50 text-2xl font-display">
-                    {item.name.charAt(0)}
+              <div
+                key={item.id}
+                className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+              >
+                <div className="flex p-4 gap-4">
+
+                  {/* Image */}
+
+                  <div className="relative shrink-0">
+
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-28 h-28 rounded-2xl object-cover"
+                      />
+                    ) : (
+                      <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+
+                        <span className="text-4xl font-bold text-orange-400">
+
+                          {item.name.charAt(0)}
+
+                        </span>
+
+                      </div>
+                    )}
+
+                    {item.isVeg ? (
+                      <span className="absolute top-2 left-2 bg-green-600 text-white text-[10px] px-2 py-1 rounded-full">
+                        VEG
+                      </span>
+                    ) : (
+                      <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-1 rounded-full">
+                        NON VEG
+                      </span>
+                    )}
+
                   </div>
-                )}
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`mt-1 shrink-0 w-3.5 h-3.5 border-2 rounded-[3px] flex items-center justify-center ${
-                        item.isVeg ? "border-emerald-600" : "border-rose-600"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${item.isVeg ? "bg-emerald-600" : "bg-rose-600"}`} />
-                    </span>
-                    <h3 className="font-semibold leading-snug break-words">{item.name}</h3>
-                  </div>
+                  {/* Details */}
 
-                  {item.description && (
-                    <p className="text-sm text-menuMuted mt-1 line-clamp-2">{item.description}</p>
-                  )}
+                  <div className="flex-1 min-w-0 flex flex-col">
 
-                  {item.variants ? (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {item.variants.map((v) => {
-                        const vKey = keyFor(item.id, v.label);
-                        const vQty = cart[vKey]?.qty || 0;
-                        return vQty > 0 ? (
-                          <div key={v.label} className="flex items-center gap-2 bg-menuBg rounded-full px-1 py-1">
-                            <button
-                              onClick={() => updateQty(vKey, -1)}
-                              className="w-7 h-7 rounded-full bg-white shadow-sm text-menuAccent font-bold flex items-center justify-center"
-                            >
-                              −
-                            </button>
-                            <span className="text-sm font-semibold w-4 text-center">{vQty}</span>
-                            <button
-                              onClick={() => addToCart(item, v)}
-                              className="w-7 h-7 rounded-full bg-menuAccent text-white font-bold flex items-center justify-center"
-                            >
-                              +
-                            </button>
-                            <span className="text-xs text-menuMuted pr-2">{v.label}</span>
-                          </div>
-                        ) : (
-                          <button
-                            key={v.label}
-                            onClick={() => addToCart(item, v)}
-                            className="menu-btn-outline text-xs px-3 py-1.5"
-                          >
-                            {v.label} · ₹{v.price}
-                          </button>
-                        );
-                      })}
+                    <div className="flex justify-between gap-3">
+
+                      <div>
+
+                        <h3 className="font-bold text-lg text-gray-900 leading-snug">
+
+                          {item.name}
+
+                        </h3>
+
+                        <div className="flex items-center gap-2 mt-1">
+
+                          <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+
+                            ⭐ 4.7
+
+                          </span>
+
+                          <span className="text-xs text-orange-600 font-medium">
+
+                            Bestseller
+
+                          </span>
+
+                        </div>
+
+                      </div>
+
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="font-semibold text-menuGold">₹{Number(item.price)}</span>
+
+                    {item.description && (
+
+                      <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+
+                        {item.description}
+
+                      </p>
+
+                    )}
+
+                    <div className="mt-auto pt-4 flex items-center justify-between">
+
+                      <div>
+
+                        <p className="text-2xl font-bold text-orange-600">
+
+                          ₹{Number(item.price)}
+
+                        </p>
+
+                        <p className="text-xs text-gray-400">
+
+                          Inclusive of taxes
+
+                        </p>
+
+                      </div>
+
                       {simpleQty > 0 ? (
-                        <div className="flex items-center gap-3 bg-menuBg rounded-full px-1 py-1">
+
+                        <div className="flex items-center rounded-full bg-orange-600 text-white overflow-hidden shadow-lg">
+
                           <button
                             onClick={() => updateQty(simpleKey, -1)}
-                            className="w-7 h-7 rounded-full bg-white shadow-sm text-menuAccent font-bold flex items-center justify-center"
+                            className="w-10 h-10 hover:bg-orange-700 transition"
                           >
                             −
                           </button>
-                          <span className="text-sm font-semibold w-4 text-center">{simpleQty}</span>
+
+                          <span className="w-10 text-center font-bold">
+
+                            {simpleQty}
+
+                          </span>
+
                           <button
                             onClick={() => addToCart(item)}
-                            className="w-7 h-7 rounded-full bg-menuAccent text-white font-bold flex items-center justify-center"
+                            className="w-10 h-10 hover:bg-orange-700 transition"
                           >
                             +
                           </button>
+
                         </div>
+
                       ) : (
-                        <button onClick={() => addToCart(item)} className="menu-btn-primary px-4 py-1.5 text-sm">
-                          Add
+
+                        <button
+                          onClick={() => addToCart(item)}
+                          className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 font-semibold shadow-lg hover:scale-105 transition"
+                        >
+                          + Add
                         </button>
+
                       )}
+
                     </div>
-                  )}
+
+                  </div>
+
                 </div>
               </div>
             );
@@ -279,55 +400,233 @@ export default function MenuPage() {
 
       {/* Floating cart bar */}
       {cartCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 safe-bottom px-4 pb-4 pt-2 bg-gradient-to-t from-menuBg via-menuBg/95 to-transparent">
-          <div className="mx-auto w-full max-w-xl">
+        <div className="fixed bottom-5 left-0 right-0 z-50 px-4">
+          <div className="mx-auto max-w-xl">
+
             <button
               onClick={() => setCheckoutOpen(true)}
-              className="w-full bg-menuAccent text-white rounded-2xl px-5 py-4 flex items-center justify-between shadow-menu font-semibold"
+              className="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white shadow-2xl hover:scale-[1.02] transition-all duration-300"
             >
-              <span>{cartCount} item{cartCount > 1 ? "s" : ""} · ₹{cartTotal.toFixed(0)}</span>
-              <span>View Cart →</span>
+
+              <div className="flex items-center justify-between px-6 py-4">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur">
+
+                    🛒
+
+                  </div>
+
+                  <div className="text-left">
+
+                    <p className="font-bold text-lg">
+
+                      {cartCount} Item{cartCount > 1 ? "s" : ""}
+
+                    </p>
+
+                    <p className="text-orange-100 text-sm">
+
+                      Ready to order
+
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div className="text-right">
+
+                  <p className="text-2xl font-bold">
+
+                    ₹{cartTotal.toFixed(0)}
+
+                  </p>
+
+                  <p className="text-sm">
+
+                    View Cart →
+
+                  </p>
+
+                </div>
+
+              </div>
+
             </button>
+
           </div>
+
         </div>
       )}
 
       {/* Checkout drawer */}
       {checkoutOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-end z-40">
-          <div className="menu-card w-full max-w-xl mx-auto rounded-t-3xl rounded-b-none p-6 safe-bottom max-h-[88vh] overflow-y-auto">
-            <div className="w-10 h-1 bg-menuBorder rounded-full mx-auto mb-4" />
-            <h2 className="font-display text-xl mb-4">Your order — Table {table.tableNumber}</h2>
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-xl mx-auto rounded-t-[34px] bg-white shadow-2xl animate-slideUp max-h-[92vh] overflow-hidden flex flex-col">
+            <div className="py-3">
+
+              <div className="w-14 h-1.5 bg-gray-300 rounded-full mx-auto" />
+
+            </div>
+            <div className="px-6 pb-4 border-b">
+
+              <div className="flex justify-between items-center">
+
+                <div>
+
+                  <h2 className="text-2xl font-bold">
+
+                    Your Order
+
+                  </h2>
+
+                  <p className="text-gray-500">
+
+                    Table {table.tableNumber}
+
+                  </p>
+
+                </div>
+
+                <button
+
+                  onClick={() => setCheckoutOpen(false)}
+
+                  className="h-10 w-10 rounded-full bg-gray-100 hover:bg-gray-200"
+
+                >
+
+                  ✕
+
+                </button>
+
+              </div>
+
+            </div>
 
             <div className="space-y-3 mb-5">
               {cartList.map((c) => {
                 const key = keyFor(c.menuItemId, c.variantLabel);
                 return (
                   <div key={key} className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium break-words">
-                        {c.name} {c.variantLabel && `(${c.variantLabel})`}
-                      </p>
-                      <p className="text-xs text-menuMuted">₹{c.price} each</p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button onClick={() => updateQty(key, -1)} className="w-7 h-7 rounded-full bg-menuBg font-bold">−</button>
-                      <span className="w-4 text-center text-sm font-semibold">{c.qty}</span>
-                      <button onClick={() => updateQty(key, 1)} className="w-7 h-7 rounded-full bg-menuBg font-bold">+</button>
+                    <div
+                      className="flex justify-between items-center bg-gray-50 rounded-2xl p-4"
+                    >
+
+                      <div>
+
+                        <p className="font-semibold">
+
+                          {c.name}
+
+                          {c.variantLabel && ` (${c.variantLabel})`}
+
+                        </p>
+
+                        <p className="text-sm text-gray-500">
+
+                          ₹{c.price}
+
+                        </p>
+
+                      </div>
+
+                      <div className="flex items-center gap-3">
+
+                        <button
+
+                          onClick={() => updateQty(key, -1)}
+
+                          className="w-9 h-9 rounded-full bg-white shadow"
+
+                        >
+
+                          −
+
+                        </button>
+
+                        <span className="font-bold">
+
+                          {c.qty}
+
+                        </span>
+
+                        <button
+
+                          onClick={() => updateQty(key, 1)}
+
+                          className="w-9 h-9 rounded-full bg-orange-500 text-white"
+
+                        >
+
+                          +
+
+                        </button>
+
+                      </div>
+
                     </div>
                   </div>
                 );
               })}
             </div>
+            <div className="rounded-2xl bg-orange-50 p-5 mb-6">
 
-            <div className="flex justify-between font-semibold border-t border-menuBorder pt-3 mb-5">
-              <span>Subtotal</span>
-              <span>₹{cartTotal.toFixed(0)}</span>
+              <div className="flex justify-between">
+
+                <span>
+
+                  Subtotal
+
+                </span>
+
+                <span>
+
+                  ₹{cartTotal.toFixed(0)}
+
+                </span>
+
+              </div>
+
+              <div className="flex justify-between mt-2">
+
+                <span>
+
+                  Delivery
+
+                </span>
+
+                <span>
+
+                  FREE
+
+                </span>
+
+              </div>
+
+              <div className="border-t mt-4 pt-4 flex justify-between text-lg font-bold">
+
+                <span>
+
+                  Total
+
+                </span>
+
+                <span className="text-orange-600">
+
+                  ₹{cartTotal.toFixed(0)}
+
+                </span>
+
+              </div>
+
             </div>
-
+           
             <div className="space-y-3">
               <input
-                className="menu-input"
+                className="w-full rounded-2xl border border-gray-300 px-5 py-4 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition"
                 placeholder="Your name"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
@@ -342,7 +641,7 @@ export default function MenuPage() {
               <button
                 onClick={placeOrder}
                 disabled={placing || !customerName || !customerPhone}
-                className="menu-btn-primary w-full py-3.5"
+                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 font-bold text-white shadow-xl hover:scale-[1.02] transition disabled:opacity-50"
               >
                 {placing ? "Placing order…" : "Place Order"}
               </button>

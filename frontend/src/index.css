@@ -68,3 +68,52 @@ body {
 /* text-[16px] on inputs is deliberate: iOS Safari auto-zooms the page on
    any input with font-size under 16px, which is the #1 cause of "content
    idhar udhar ho jaata hai" glitches on a mobile checkout form. */
+
+
+
+   /* 31 July 2026 add some css to enhance customer pages...*/
+
+   .menu-card{
+
+transition:.35s ease;
+
+}
+
+.menu-card:hover{
+
+transform:translateY(-6px);
+
+box-shadow:0 20px 40px rgba(0,0,0,.08);
+
+}
+
+::-webkit-scrollbar{
+
+display:none;
+
+}
+
+html{
+
+scroll-behavior:smooth;
+
+}
+
+
+
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp .35s ease;
+}
