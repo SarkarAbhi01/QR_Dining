@@ -8,7 +8,13 @@ html, body, #root {
 
 body {
   @apply font-body bg-ink text-cream antialiased;
+  overflow-x: hidden; /* guards against any stray element causing sideways scroll on mobile */
 }
+
+/* iOS/Android notch + home-indicator safe areas, used on the customer pages
+   which run full-bleed edge-to-edge on a phone */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -37,3 +43,28 @@ body {
 .input {
   @apply w-full bg-surface2 border border-white/10 rounded-lg px-3 py-2.5 text-cream placeholder:text-ash focus:outline-none focus:ring-2 focus:ring-marigold/60;
 }
+
+/* ============================================================
+   Customer-facing digital menu — dedicated warm theme, entirely
+   separate from the admin tokens above so re-theming one side
+   never affects the other.
+   ============================================================ */
+
+.menu-btn-primary {
+  @apply bg-menuAccent text-white font-semibold rounded-full transition-colors hover:bg-menuAccentDark disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+.menu-btn-outline {
+  @apply border-2 border-menuAccent text-menuAccent font-semibold rounded-full transition-colors hover:bg-menuAccent hover:text-white disabled:opacity-40;
+}
+
+.menu-card {
+  @apply bg-menuCard rounded-2xl shadow-menu border border-menuBorder;
+}
+
+.menu-input {
+  @apply w-full border border-menuBorder rounded-xl px-4 py-3 text-[16px] text-menuInk placeholder:text-menuMuted focus:outline-none focus:ring-2 focus:ring-menuAccent/40 focus:border-menuAccent;
+}
+/* text-[16px] on inputs is deliberate: iOS Safari auto-zooms the page on
+   any input with font-size under 16px, which is the #1 cause of "content
+   idhar udhar ho jaata hai" glitches on a mobile checkout form. */
