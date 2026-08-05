@@ -51,7 +51,12 @@ export default function KitchenDisplay() {
           <div key={order.id} className="card p-5 border-l-4 border-marigold">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <p className="font-display text-lg">Table {order.table.tableNumber}</p>
+                <p className="font-display text-lg">
+                  Table {order.table.tableNumber}
+                  {order.parentOrderId && (
+                    <span className="ml-2 badge bg-clay/20 text-clay align-middle">🔁 Add-on</span>
+                  )}
+                </p>
                 <p className="text-xs text-ash">{new Date(order.createdAt).toLocaleTimeString()}</p>
               </div>
               <span className={`badge ${order.status === "COOKING" ? "bg-clay/20 text-clay" : "bg-ash/20 text-ash"}`}>

@@ -56,7 +56,12 @@ export default function WaiterDashboard() {
         {orders.map((order) => (
           <div key={order.id} className="card p-5">
             <div className="flex justify-between items-start mb-3">
-              <p className="font-display text-lg">Table {order.table.tableNumber}</p>
+              <p className="font-display text-lg">
+                Table {order.table.tableNumber}
+                {order.parentOrderId && (
+                  <span className="ml-2 badge bg-clay/20 text-clay align-middle">🔁 Add-on</span>
+                )}
+              </p>
               <StatusBadge status={order.status} />
             </div>
             <p className="text-sm text-ash mb-3">{order.customerName} · ₹{Number(order.totalAmount).toFixed(0)}</p>

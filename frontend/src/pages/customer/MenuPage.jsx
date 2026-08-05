@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../../api/axios";
 
 export default function MenuPage() {
   const { qrToken } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const addToOrderId = searchParams.get("addToOrder"); // set when this is an "Add More Items" trip, not a fresh order
 
   const [table, setTable] = useState(null);
   const [error, setError] = useState("");
@@ -15,8 +17,6 @@ export default function MenuPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [placing, setPlacing] = useState(false);
-
-  const [search, setSearch] = useState("");
 
   useEffect(() => {
     api
@@ -86,6 +86,26 @@ export default function MenuPage() {
   }
 
   async function placeOrder() {
+    if (addToOrderId) {
+      setPlacing(true);
+      try {
+        await api.post(`/public/orders/${addToOrderId}/add-items`, {
+          items: cartList.map((c) => ({
+            menuItemId: c.menuItemId,
+            variantLabel: c.variantLabel,
+            quantity: c.qty,
+            price: c.price,
+          })),
+        });
+        navigate(`/track/${addToOrderId}`);
+      } catch (err) {
+        setError(err.response?.data?.message || "Could not add items to your order");
+      } finally {
+        setPlacing(false);
+      }
+      return;
+    }
+
     if (!customerName || !customerPhone) return;
     setPlacing(true);
     try {
@@ -140,47 +160,79 @@ export default function MenuPage() {
     );
   }
 
-  const activeItems = (itemsByCategory[activeCategory] || []).filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const activeItems = itemsByCategory[activeCategory] || [];
 
   return (
-    <div className="min-h-screen bg-menuBg text-menuInk">
-      <div className="mx-auto w-full max-w-xl">
-        {/* Header */}
-        <header className="relative overflow-hidden rounded-b-[32px] bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 text-white shadow-xl">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-gray-50 text-menuInk">
 
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white"></div>
-            <div className="absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-white"></div>
+      <div className="mx-auto w-full max-w-xl">
+
+        {/* ================= HEADER ================= */}
+
+        <header className="relative overflow-hidden rounded-b-[34px] bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 text-white shadow-2xl">
+
+          {/* Decorative circles */}
+
+          <div className="absolute inset-0 overflow-hidden opacity-10">
+
+            <div className="absolute -top-14 -right-10 h-44 w-44 rounded-full bg-white"></div>
+
+            <div className="absolute bottom-0 -left-16 h-36 w-36 rounded-full bg-white"></div>
+
           </div>
 
           <div className="relative px-6 pt-8 pb-8">
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4">
 
-              <div>
+              <div className="min-w-0 flex-1">
 
-                <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold tracking-widest uppercase">
+                <span className="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold tracking-widest uppercase backdrop-blur">
+
                   Table {table.tableNumber}
+
                 </span>
 
-                <h1 className="mt-4 text-3xl font-bold leading-tight">
+                <h1 className="mt-4 text-3xl font-bold leading-tight break-words">
+
                   {table.restaurant.name}
+
                 </h1>
 
-                <p className="mt-2 text-sm text-orange-100">
-                  {table.restaurant.address}
-                </p>
+                {table.restaurant.address && (
+
+                  <p className="mt-2 text-sm text-orange-100 break-words">
+
+                    {table.restaurant.address}
+
+                  </p>
+
+                )}
+
+                {addToOrderId && (
+
+                  <div className="mt-4 inline-flex items-center rounded-full bg-white/20 px-3 py-2 text-xs font-semibold backdrop-blur">
+
+                    ➕ Adding items to existing order
+
+                  </div>
+
+                )}
 
               </div>
 
-              <div className="rounded-2xl bg-white/20 px-4 py-3 backdrop-blur">
+              <div className="rounded-2xl bg-white/20 px-4 py-3 backdrop-blur shrink-0">
 
-                <p className="text-xs">⭐ Rating</p>
+                <p className="text-xs">
 
-                <h3 className="text-lg font-bold">
-                  4.7
+                  Welcome
+
+                </p>
+
+                <h3 className="text-xl font-bold">
+
+                  🍽️
+
                 </h3>
 
               </div>
@@ -190,16 +242,12 @@ export default function MenuPage() {
           </div>
 
         </header>
-        <div className="sticky top-0 z-30 bg-menuBg px-5 pt-4">
+
+        {/* ================= SEARCH ================= */}
+
+        <div className="sticky top-0 z-40 bg-gradient-to-b from-white via-white to-white/90 backdrop-blur px-5 pt-4 pb-3">
 
           <div className="relative">
-
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search delicious food..."
-              className="w-full rounded-2xl border border-gray-200 bg-white px-5 py-3 pl-12 shadow-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
-            />
 
             <svg
               className="absolute left-4 top-3.5 h-5 w-5 text-gray-400"
@@ -208,26 +256,33 @@ export default function MenuPage() {
               strokeWidth="2"
               viewBox="0 0 24 24"
             >
-              <path d="M21 21l-4.3-4.3"></path>
-              <circle cx="11" cy="11" r="6"></circle>
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-4-4" />
             </svg>
+
+            <input
+              placeholder="Search food..."
+              className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-12 pr-4 shadow-sm outline-none transition-all focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+            />
 
           </div>
 
         </div>
-        {/* Category tabs */}
-        <div className="sticky top-[72px] z-20 bg-menuBg px-5 py-4 overflow-x-auto">
 
-          <div className="flex gap-3 w-max">
+        {/* ================= CATEGORY ================= */}
+
+        <div className="sticky top-[82px] z-30 bg-white px-5 pb-4">
+
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide">
 
             {table.restaurant.categories.map((cat) => (
 
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${activeCategory === cat.id
-                  ? "bg-orange-600 text-white shadow-lg scale-105"
-                  : "bg-white border border-gray-200 text-gray-700 hover:border-orange-400"
+                className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${activeCategory === cat.id
+                    ? "bg-orange-600 text-white shadow-lg"
+                    : "bg-white border border-gray-200 text-gray-700 hover:border-orange-400"
                   }`}
               >
                 {cat.name}
@@ -244,12 +299,13 @@ export default function MenuPage() {
           {activeItems.map((item) => {
             const simpleKey = keyFor(item.id, null);
             const simpleQty = cart[simpleKey]?.qty || 0;
+
             return (
               <div
                 key={item.id}
-                className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                className="group overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
               >
-                <div className="flex p-4 gap-4">
+                <div className="flex gap-4 p-4">
 
                   {/* Image */}
 
@@ -259,132 +315,156 @@ export default function MenuPage() {
                       <img
                         src={item.imageUrl}
                         alt={item.name}
-                        className="w-28 h-28 rounded-2xl object-cover"
+                        className="h-28 w-28 rounded-2xl object-cover"
                       />
                     ) : (
-                      <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-
-                        <span className="text-4xl font-bold text-orange-400">
-
+                      <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-orange-200">
+                        <span className="text-4xl font-bold text-orange-500">
                           {item.name.charAt(0)}
-
                         </span>
-
                       </div>
                     )}
 
-                    {item.isVeg ? (
-                      <span className="absolute top-2 left-2 bg-green-600 text-white text-[10px] px-2 py-1 rounded-full">
-                        VEG
-                      </span>
-                    ) : (
-                      <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-1 rounded-full">
-                        NON VEG
-                      </span>
-                    )}
+                    <span
+                      className={`absolute left-2 top-2 rounded-full px-2 py-1 text-[10px] font-semibold text-white ${item.isVeg
+                          ? "bg-green-600"
+                          : "bg-red-600"
+                        }`}
+                    >
+                      {item.isVeg ? "VEG" : "NON VEG"}
+                    </span>
 
                   </div>
 
                   {/* Details */}
 
-                  <div className="flex-1 min-w-0 flex flex-col">
+                  <div className="flex min-w-0 flex-1 flex-col">
 
-                    <div className="flex justify-between gap-3">
+                    <div>
 
-                      <div>
+                      <h3 className="break-words text-lg font-bold text-gray-900">
+                        {item.name}
+                      </h3>
 
-                        <h3 className="font-bold text-lg text-gray-900 leading-snug">
-
-                          {item.name}
-
-                        </h3>
-
-                        <div className="flex items-center gap-2 mt-1">
-
-                          <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-
-                            ⭐ 4.7
-
-                          </span>
-
-                          <span className="text-xs text-orange-600 font-medium">
-
-                            Bestseller
-
-                          </span>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                    {item.description && (
-
-                      <p className="mt-2 text-sm text-gray-500 line-clamp-2">
-
-                        {item.description}
-
-                      </p>
-
-                    )}
-
-                    <div className="mt-auto pt-4 flex items-center justify-between">
-
-                      <div>
-
-                        <p className="text-2xl font-bold text-orange-600">
-
-                          ₹{Number(item.price)}
-
+                      {item.description && (
+                        <p className="mt-2 line-clamp-2 text-sm text-gray-500">
+                          {item.description}
                         </p>
-
-                        <p className="text-xs text-gray-400">
-
-                          Inclusive of taxes
-
-                        </p>
-
-                      </div>
-
-                      {simpleQty > 0 ? (
-
-                        <div className="flex items-center rounded-full bg-orange-600 text-white overflow-hidden shadow-lg">
-
-                          <button
-                            onClick={() => updateQty(simpleKey, -1)}
-                            className="w-10 h-10 hover:bg-orange-700 transition"
-                          >
-                            −
-                          </button>
-
-                          <span className="w-10 text-center font-bold">
-
-                            {simpleQty}
-
-                          </span>
-
-                          <button
-                            onClick={() => addToCart(item)}
-                            className="w-10 h-10 hover:bg-orange-700 transition"
-                          >
-                            +
-                          </button>
-
-                        </div>
-
-                      ) : (
-
-                        <button
-                          onClick={() => addToCart(item)}
-                          className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2.5 font-semibold shadow-lg hover:scale-105 transition"
-                        >
-                          + Add
-                        </button>
-
                       )}
 
                     </div>
+
+                    {/* Variant Section */}
+
+                    {item.variants ? (
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+
+                        {item.variants.map((v) => {
+
+                          const vKey = keyFor(item.id, v.label);
+                          const vQty = cart[vKey]?.qty || 0;
+
+                          return vQty > 0 ? (
+
+                            <div
+                              key={v.label}
+                              className="flex items-center overflow-hidden rounded-full bg-orange-600 text-white shadow"
+                            >
+                              <button
+                                onClick={() => updateQty(vKey, -1)}
+                                className="h-9 w-9 hover:bg-orange-700"
+                              >
+                                −
+                              </button>
+
+                              <span className="w-8 text-center font-bold">
+                                {vQty}
+                              </span>
+
+                              <button
+                                onClick={() => addToCart(item, v)}
+                                className="h-9 w-9 hover:bg-orange-700"
+                              >
+                                +
+                              </button>
+
+                              <span className="px-3 text-xs">
+                                {v.label}
+                              </span>
+
+                            </div>
+
+                          ) : (
+
+                            <button
+                              key={v.label}
+                              onClick={() => addToCart(item, v)}
+                              className="rounded-full border border-orange-300 bg-orange-50 px-4 py-2 text-xs font-semibold text-orange-600 transition hover:bg-orange-600 hover:text-white"
+                            >
+                              {v.label} · ₹{v.price}
+                            </button>
+
+                          );
+
+                        })}
+
+                      </div>
+
+                    ) : (
+
+                      <div className="mt-auto flex items-end justify-between pt-5">
+
+                        <div>
+
+                          <p className="text-2xl font-bold text-orange-600">
+                            ₹{Number(item.price)}
+                          </p>
+
+                          <p className="text-xs text-gray-400">
+                            Inclusive of taxes
+                          </p>
+
+                        </div>
+
+                        {simpleQty > 0 ? (
+
+                          <div className="flex items-center overflow-hidden rounded-full bg-orange-600 text-white shadow-lg">
+
+                            <button
+                              onClick={() => updateQty(simpleKey, -1)}
+                              className="h-10 w-10 hover:bg-orange-700"
+                            >
+                              −
+                            </button>
+
+                            <span className="w-10 text-center font-bold">
+                              {simpleQty}
+                            </span>
+
+                            <button
+                              onClick={() => addToCart(item)}
+                              className="h-10 w-10 hover:bg-orange-700"
+                            >
+                              +
+                            </button>
+
+                          </div>
+
+                        ) : (
+
+                          <button
+                            onClick={() => addToCart(item)}
+                            className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-2.5 font-semibold text-white shadow-lg transition hover:scale-105"
+                          >
+                            + Add
+                          </button>
+
+                        )}
+
+                      </div>
+
+                    )}
 
                   </div>
 
@@ -399,18 +479,22 @@ export default function MenuPage() {
       </div>
 
       {/* Floating cart bar */}
+      {/* Floating Cart */}
+
       {cartCount > 0 && (
-        <div className="fixed bottom-5 left-0 right-0 z-50 px-4">
+
+        <div className="fixed bottom-4 left-0 right-0 z-50 px-4">
+
           <div className="mx-auto max-w-xl">
 
             <button
               onClick={() => setCheckoutOpen(true)}
-              className="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white shadow-2xl hover:scale-[1.02] transition-all duration-300"
+              className="w-full overflow-hidden rounded-3xl bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white shadow-2xl transition-all duration-300 hover:scale-[1.02]"
             >
 
               <div className="flex items-center justify-between px-6 py-4">
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
 
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur">
 
@@ -420,15 +504,15 @@ export default function MenuPage() {
 
                   <div className="text-left">
 
-                    <p className="font-bold text-lg">
+                    <p className="text-lg font-bold">
 
                       {cartCount} Item{cartCount > 1 ? "s" : ""}
 
                     </p>
 
-                    <p className="text-orange-100 text-sm">
+                    <p className="text-sm text-orange-100">
 
-                      Ready to order
+                      Ready to Order
 
                     </p>
 
@@ -459,20 +543,29 @@ export default function MenuPage() {
           </div>
 
         </div>
+
       )}
 
       {/* Checkout drawer */}
       {checkoutOpen && (
+
         <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-xl mx-auto rounded-t-[34px] bg-white shadow-2xl animate-slideUp max-h-[92vh] overflow-hidden flex flex-col">
+
+          <div className="mx-auto flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-[34px] bg-white shadow-2xl">
+
+            {/* Drag Handle */}
+
             <div className="py-3">
 
-              <div className="w-14 h-1.5 bg-gray-300 rounded-full mx-auto" />
+              <div className="mx-auto h-1.5 w-16 rounded-full bg-gray-300" />
 
             </div>
-            <div className="px-6 pb-4 border-b">
 
-              <div className="flex justify-between items-center">
+            {/* Header */}
+
+            <div className="border-b px-6 pb-5">
+
+              <div className="flex items-center justify-between">
 
                 <div>
 
@@ -491,11 +584,8 @@ export default function MenuPage() {
                 </div>
 
                 <button
-
                   onClick={() => setCheckoutOpen(false)}
-
-                  className="h-10 w-10 rounded-full bg-gray-100 hover:bg-gray-200"
-
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
                 >
 
                   ✕
@@ -506,152 +596,122 @@ export default function MenuPage() {
 
             </div>
 
-            <div className="space-y-3 mb-5">
-              {cartList.map((c) => {
-                const key = keyFor(c.menuItemId, c.variantLabel);
-                return (
-                  <div key={key} className="flex items-center justify-between gap-3">
-                    <div
-                      className="flex justify-between items-center bg-gray-50 rounded-2xl p-4"
-                    >
+            {/* Scroll Area */}
 
-                      <div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
 
-                        <p className="font-semibold">
+              {/* CART ITEMS */}
 
-                          {c.name}
-
-                          {c.variantLabel && ` (${c.variantLabel})`}
-
+              <div className="space-y-3 mb-5">
+                {cartList.map((c) => {
+                  const key = keyFor(c.menuItemId, c.variantLabel);
+                  return (
+                    <div key={key} className="mb-3 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium break-words">
+                          {c.name} {c.variantLabel && `(${c.variantLabel})`}
                         </p>
-
-                        <p className="text-sm text-gray-500">
-
-                          ₹{c.price}
-
-                        </p>
-
+                        <p className="text-xs text-menuMuted">₹{c.price} each</p>
                       </div>
-
-                      <div className="flex items-center gap-3">
-
-                        <button
-
-                          onClick={() => updateQty(key, -1)}
-
-                          className="w-9 h-9 rounded-full bg-white shadow"
-
-                        >
-
-                          −
-
-                        </button>
-
-                        <span className="font-bold">
-
-                          {c.qty}
-
-                        </span>
-
-                        <button
-
-                          onClick={() => updateQty(key, 1)}
-
-                          className="w-9 h-9 rounded-full bg-orange-500 text-white"
-
-                        >
-
-                          +
-
-                        </button>
-
+                      <div className="flex items-center rounded-full bg-white shadow shrink-0">
+                        <button onClick={() => updateQty(key, -1)} className="h-9 w-9 rounded-full hover:bg-gray-100">−</button>
+                        <span className="w-8 text-center font-bold">{c.qty}</span>
+                        <button onClick={() => updateQty(key, 1)} className="h-9 w-9 rounded-full bg-orange-500 text-white hover:bg-orange-600">+</button>
                       </div>
-
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="rounded-2xl bg-orange-50 p-5 mb-6">
+                  );
+                })}
+              </div>
 
-              <div className="flex justify-between">
+              <div className="mb-6 rounded-2xl bg-orange-50 p-5">
 
-                <span>
+                <div className="flex justify-between">
 
-                  Subtotal
+                  <span>
 
-                </span>
+                    Subtotal
 
-                <span>
+                  </span>
 
-                  ₹{cartTotal.toFixed(0)}
+                  <span>
 
-                </span>
+                    ₹{cartTotal.toFixed(0)}
+
+                  </span>
+
+                </div>
+
+                <div className="mt-2 flex justify-between">
+
+                  <span>
+
+                    Taxes
+
+                  </span>
+
+                  <span>
+
+                    Included
+
+                  </span>
+
+                </div>
+
+                <div className="mt-4 flex justify-between border-t pt-4 text-xl font-bold">
+
+                  <span>
+
+                    Total
+
+                  </span>
+
+                  <span className="text-orange-600">
+
+                    ₹{cartTotal.toFixed(0)}
+
+                  </span>
+
+                </div>
 
               </div>
 
-              <div className="flex justify-between mt-2">
-
-                <span>
-
-                  Delivery
-
-                </span>
-
-                <span>
-
-                  FREE
-
-                </span>
-
+              <div className="space-y-3">
+                {!addToOrderId && (
+                  <>
+                    <input
+                      className="w-full rounded-2xl border border-gray-300 px-5 py-4 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                      placeholder="Your name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                    />
+                    <input
+                      className="w-full rounded-2xl border border-gray-300 px-5 py-4 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                      placeholder="Mobile number"
+                      inputMode="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                    />
+                  </>
+                )}
+                <button
+                  onClick={placeOrder}
+                  disabled={placing || (!addToOrderId && (!customerName || !customerPhone))}
+                  className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 text-lg font-bold text-white shadow-xl transition hover:scale-[1.01] disabled:opacity-50"
+                >
+                  {placing
+                    ? (addToOrderId ? "Adding to your order…" : "Placing order…")
+                    : (addToOrderId ? "Add to Order" : "Place Order")}
+                </button>
+                <button onClick={() => setCheckoutOpen(false)} className="mt-3 w-full rounded-xl border py-3 text-gray-500 hover:bg-gray-50">
+                  Continue browsing
+                </button>
               </div>
-
-              <div className="border-t mt-4 pt-4 flex justify-between text-lg font-bold">
-
-                <span>
-
-                  Total
-
-                </span>
-
-                <span className="text-orange-600">
-
-                  ₹{cartTotal.toFixed(0)}
-
-                </span>
-
-              </div>
-
-            </div>
-           
-            <div className="space-y-3">
-              <input
-                className="w-full rounded-2xl border border-gray-300 px-5 py-4 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition"
-                placeholder="Your name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-              <input
-                className="menu-input"
-                placeholder="Mobile number"
-                inputMode="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-              />
-              <button
-                onClick={placeOrder}
-                disabled={placing || !customerName || !customerPhone}
-                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 font-bold text-white shadow-xl hover:scale-[1.02] transition disabled:opacity-50"
-              >
-                {placing ? "Placing order…" : "Place Order"}
-              </button>
-              <button onClick={() => setCheckoutOpen(false)} className="w-full text-menuMuted text-sm py-1">
-                Continue browsing
-              </button>
             </div>
           </div>
-        </div>
+          </div>
       )}
     </div>
-  );
+        
+      
+  )
 }
