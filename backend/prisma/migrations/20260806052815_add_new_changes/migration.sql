@@ -32,6 +32,7 @@ CREATE TABLE "restaurants" (
     "subscriptionPlan" "SubscriptionPlan" NOT NULL DEFAULT 'TRIAL',
     "subscriptionStatus" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIVE',
     "subscriptionEndsAt" TIMESTAMP(3),
+    "canDownloadReports" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -124,6 +125,7 @@ CREATE TABLE "orders" (
     "waiterCallRequested" BOOLEAN NOT NULL DEFAULT false,
     "acceptedById" TEXT,
     "servedById" TEXT,
+    "parentOrderId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -175,6 +177,9 @@ CREATE UNIQUE INDEX "tables_restaurantId_tableNumber_key" ON "tables"("restauran
 -- CreateIndex
 CREATE INDEX "orders_restaurantId_status_idx" ON "orders"("restaurantId", "status");
 
+-- CreateIndex
+CREATE INDEX "orders_parentOrderId_idx" ON "orders"("parentOrderId");
+
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES "restaurants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -201,6 +206,9 @@ ALTER TABLE "orders" ADD CONSTRAINT "orders_acceptedById_fkey" FOREIGN KEY ("acc
 
 -- AddForeignKey
 ALTER TABLE "orders" ADD CONSTRAINT "orders_servedById_fkey" FOREIGN KEY ("servedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "orders" ADD CONSTRAINT "orders_parentOrderId_fkey" FOREIGN KEY ("parentOrderId") REFERENCES "orders"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
