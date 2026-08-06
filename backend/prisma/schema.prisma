@@ -82,6 +82,7 @@ model Restaurant {
   subscriptionPlan   SubscriptionPlan   @default(TRIAL)
   subscriptionStatus SubscriptionStatus @default(ACTIVE)
   subscriptionEndsAt DateTime?
+  canDownloadReports Boolean            @default(false) // granted by Super Admin only
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -211,6 +212,14 @@ model Order {
   acceptedBy    User?         @relation("AcceptedBy", fields: [acceptedById], references: [id])
   servedById    String?
   servedBy      User?         @relation("ServedBy", fields: [servedById], references: [id])
+  // Self-relation: when a customer taps "Add More Items" mid-meal, the new
+  // items become a separate sub-order (its own kitchen ticket, its own
+  // Accept → Cooking → Ready → Served cycle) but bill under the ORIGINAL
+  // order for that table visit. parentOrderId is always the root order —
+  // sub-orders never chain off each other, keeping "session" lookups O(1).
+  parentOrderId String?
+  parentOrder   Order?        @relation("OrderChildren", fields: [parentOrderId], references: [id])
+  childOrders   Order[]       @relation("OrderChildren")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -218,6 +227,7 @@ model Order {
   payments Payment[]
 
   @@index([restaurantId, status])
+  @@index([parentOrderId])
   @@map("orders")
 }
 
