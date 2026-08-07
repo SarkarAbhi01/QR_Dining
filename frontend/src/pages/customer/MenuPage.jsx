@@ -6,7 +6,7 @@ export default function MenuPage() {
   const { qrToken } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const addToOrderId = searchParams.get("addToOrder"); // set when this is an "Add More Items" trip, not a fresh order
+  const explicitOrderId = searchParams.get("addToOrder"); // set when the customer tapped "Add More Items" in-app
 
   const [table, setTable] = useState(null);
   const [error, setError] = useState("");           // menu-LOAD failure only (full-page)
@@ -19,6 +19,17 @@ export default function MenuPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [placing, setPlacing] = useState(false);
+  const [forceNewOrder, setForceNewOrder] = useState(false); // escape hatch if a table's old session was left dangling
+
+  // The session this cart belongs to: an explicit "Add More Items" tap
+  // always wins; otherwise, if the SERVER says this table already has an
+  // unpaid order running (e.g. the customer just re-scanned the physical
+  // QR sticker instead of using the in-app button, possibly on a totally
+  // different phone), we transparently continue that same session so
+  // everything still lands on one bill — right up until it's paid, which
+  // is when the table becomes "free" again for a fresh scan.
+  const autoDetectedOrderId = !forceNewOrder ? table?.activeOrder?.id || null : null;
+  const sessionOrderId = explicitOrderId || autoDetectedOrderId;
 
   useEffect(() => {
     api
@@ -97,10 +108,10 @@ export default function MenuPage() {
   async function placeOrder() {
     setCheckoutError("");
 
-    if (addToOrderId) {
+    if (sessionOrderId) {
       setPlacing(true);
       try {
-        await api.post(`/public/orders/${addToOrderId}/add-items`, {
+        await api.post(`/public/orders/${sessionOrderId}/add-items`, {
           items: cartList.map((c) => ({
             menuItemId: c.menuItemId,
             variantLabel: c.variantLabel,
@@ -108,7 +119,7 @@ export default function MenuPage() {
             price: c.price,
           })),
         });
-        navigate(`/track/${addToOrderId}`);
+        navigate(`/track/${sessionOrderId}`);
       } catch (err) {
         setCheckoutError(err.response?.data?.message || "Could not add items to your order. Please try again.");
       } finally {
@@ -198,9 +209,21 @@ export default function MenuPage() {
           {table.restaurant.address && (
             <p className="text-menuBg/60 text-sm mt-1.5">{table.restaurant.address}</p>
           )}
-          {addToOrderId && (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-menuGold/20 text-menuGold text-xs font-medium px-3 py-1.5 rounded-full">
-              ➕ Adding more items to your existing order
+          {sessionOrderId && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 bg-menuGold/20 text-menuGold text-xs font-medium px-3 py-1.5 rounded-full">
+                ➕ {explicitOrderId
+                  ? "Adding more items to your existing order"
+                  : "Continuing your table's ongoing order — it'll all bill together"}
+              </div>
+              {!explicitOrderId && (
+                <button
+                  onClick={() => setForceNewOrder(true)}
+                  className="text-[11px] text-menuBg/50 underline underline-offset-2"
+                >
+                  Not you? Start a new order
+                </button>
+              )}
             </div>
           )}
         </header>
@@ -410,7 +433,7 @@ export default function MenuPage() {
           <div className="menu-card w-full max-w-xl mx-auto rounded-t-3xl rounded-b-none p-6 safe-bottom max-h-[88vh] overflow-y-auto md:mx-0 md:max-w-md md:h-full md:max-h-none md:rounded-none md:rounded-l-3xl">
             <div className="w-10 h-1 bg-menuBorder rounded-full mx-auto mb-4 md:hidden" />
             <h2 className="font-display text-xl mb-4">
-              {addToOrderId ? "Add to your order" : "Your order"} — Table {table.tableNumber}
+              {sessionOrderId ? "Add to your order" : "Your order"} — Table {table.tableNumber}
             </h2>
 
             {checkoutError && (
@@ -446,7 +469,7 @@ export default function MenuPage() {
             </div>
 
             <div className="space-y-3">
-              {!addToOrderId && (
+              {!sessionOrderId && (
                 <>
                   <input
                     className="menu-input"
@@ -465,12 +488,12 @@ export default function MenuPage() {
               )}
               <button
                 onClick={placeOrder}
-                disabled={placing || (!addToOrderId && (!customerName || !customerPhone))}
+                disabled={placing || (!sessionOrderId && (!customerName || !customerPhone))}
                 className="menu-btn-primary w-full py-3.5"
               >
                 {placing
-                  ? (addToOrderId ? "Adding to your order…" : "Placing order…")
-                  : (addToOrderId ? "Add to Order" : "Place Order")}
+                  ? (sessionOrderId ? "Adding to your order…" : "Placing order…")
+                  : (sessionOrderId ? "Add to Order" : "Place Order")}
               </button>
               <button onClick={() => setCheckoutOpen(false)} className="w-full text-menuMuted text-sm py-1">
                 Continue browsing

@@ -98,7 +98,20 @@ async function deleteTable(req, res) {
   res.status(204).send();
 }
 
-/** GET /api/tables/resolve/:qrToken — public: resolves a scanned QR to restaurant + table + menu */
+/**
+ * GET /api/tables/resolve/:qrToken — public: resolves a scanned QR to
+ * restaurant + table + menu, PLUS whether this table already has an
+ * ongoing (unpaid) order session.
+ *
+ * This is what makes "order again without re-scanning, again and again,
+ * until the table is freed by payment" actually safe: the check is on the
+ * SERVER, keyed to the table itself — not just a button in one browser.
+ * Whether the customer taps "Add More Items" in-app, or physically
+ * re-scans the QR sticker on a completely different phone, they land on
+ * the SAME session and everything bills together. The moment that root
+ * order is marked PAID, it stops matching this lookup — the table is
+ * "free" again and the next scan starts a brand-new session.
+ */
 async function resolveQrToken(req, res) {
   const table = await prisma.restaurantTable.findUnique({
     where: { qrToken: req.params.qrToken },
@@ -117,7 +130,18 @@ async function resolveQrToken(req, res) {
     return res.status(403).json({ message: "This restaurant's service is temporarily unavailable" });
   }
 
-  res.json(table);
+  const activeOrder = await prisma.order.findFirst({
+    where: {
+      tableId: table.id,
+      parentOrderId: null, // only ROOT orders represent a session
+      paymentStatus: { not: "PAID" },
+      status: { not: "CANCELLED" },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, customerName: true, createdAt: true },
+  });
+
+  res.json({ ...table, activeOrder: activeOrder || null });
 }
 
 module.exports = { createTable, listTables, updateTable, deleteTable, resolveQrToken, regenerateQr };
